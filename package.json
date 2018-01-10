@@ -1,0 +1,16 @@
+{
+  "name": "ethereum-wtp",
+  "version": "0.0.1",
+  "description": "An Ethereum-based smart contract that gives players the opportunity to win a pot of Ether",
+  "main": "index.js",
+  "repository": "git@github.com:bvand/ethereum-wtp.git",
+  "author": "Brian Vander Schaaf <bvs330@gmail.com>",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "truffle": "./node_modules/.bin/truffle"
+  },
+  "devDependencies": {
+    "truffle": "^4.0.4"
+  }
+}
