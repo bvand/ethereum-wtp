@@ -6,8 +6,4 @@ contract WinThePot {
   function WinThePot() public {
     owner = msg.sender;
   }
-
-  function getOwner() constant returns (address) {
-    return owner;
-  }
 }
