@@ -8,7 +8,8 @@
   "license": "MIT",
   "private": false,
   "scripts": {
-    "truffle": "./node_modules/.bin/truffle"
+    "truffle": "./node_modules/.bin/truffle",
+    "test": "truffle test"
   },
   "devDependencies": {
     "truffle": "^4.0.4"
