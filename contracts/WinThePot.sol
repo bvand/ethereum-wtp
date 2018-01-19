@@ -35,7 +35,7 @@ contract WinThePot {
   State public state;
   
   /*           Private Fields         */
-  uint public threshold;
+  uint private threshold;
 
   /*           Modifiers             */
   modifier onlyOwner() {
