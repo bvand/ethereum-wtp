@@ -115,7 +115,7 @@ contract WinThePot {
     return true;
   }
 
-  function contributionWins() view returns (bool) {
+  function contributionWins() private view returns (bool) {
     return currentPot >= threshold;
   }
 
@@ -151,5 +151,10 @@ contract WinThePot {
       threshold: 0
     }));
     state = State.inProgress;
+  }
+
+  /*          Accessor Methods (mostly for testing)           */
+  function getContribution(address addr) public view safeSender returns(uint value, uint gameIndex) {
+    return (contributions[addr].value, contributions[addr].gameIndex);
   }
 }
