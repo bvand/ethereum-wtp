@@ -35,7 +35,7 @@ contract WinThePot {
   State public state;
   
   /*           Private Fields         */
-  uint private threshold;
+  uint public threshold;
 
   /*           Modifiers             */
   modifier onlyOwner() {
@@ -71,7 +71,7 @@ contract WinThePot {
     owner = msg.sender;
     currentPotStartTime = now;
     state = State.inProgress;
-    threshold = 10; // TODO: use Oraclize and Random.org to generate random threshold
+    threshold = 10 ether; // TODO: use Oraclize and Random.org to generate random threshold
   }
 
   /*           Withdrawals          

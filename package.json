@@ -12,6 +12,7 @@
     "test": "truffle test"
   },
   "devDependencies": {
+    "bignumber.js": "^5.0.0",
     "truffle": "^4.0.4"
   }
 }
