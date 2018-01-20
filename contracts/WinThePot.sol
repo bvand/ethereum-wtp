@@ -154,7 +154,12 @@ contract WinThePot {
   }
 
   /*          Accessor Methods (mostly for testing)           */
-  function getContribution(address addr) public view safeSender returns(uint value, uint gameIndex) {
+  function getContribution(address addr) public view safeSender returns (uint value, uint gameIndex) {
     return (contributions[addr].value, contributions[addr].gameIndex);
+  }
+
+  function getGame(uint index) public view returns (bool allCanWithdraw, address winner, uint winnings, uint thresh) {
+    Game storage game = games[index];
+    return (game.allCanWithdraw, game.winner, game.winnings, game.threshold);
   }
 }
