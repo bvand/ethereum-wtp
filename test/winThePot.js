@@ -1,7 +1,7 @@
 const WinThePot = artifacts.require("WinThePot");
 const BigNumber = require('bignumber.js');
 
-contract("WinThePot", function(accounts) {
+contract("WinThePot", (accounts) => {
     let contract;
     let contribute;
     let checkContribution;
@@ -17,7 +17,7 @@ contract("WinThePot", function(accounts) {
     const account1 = accounts[1];
     const account2 = accounts[2];
 
-    beforeEach(async function () {
+    beforeEach(async () => {
         contract = await WinThePot.new();
         contribute = async (account, etherValue) => {
             await contract.sendTransaction({
@@ -30,18 +30,18 @@ contract("WinThePot", function(accounts) {
             const value = contribution[0];
             const gameIndex = contribution[1];
     
-            assert.isTrue(value.equals(expectedValue));
-            assert.isTrue(gameIndex.equals(expectedIndex));
+            assert.isTrue(value.equals(expectedValue), `expected value ${value} to equal ${expectedValue}`);
+            assert.isTrue(gameIndex.equals(expectedIndex), `expected index ${gameIndex} to equal ${expectedIndex}`);
         }
     });
 
-    it("should initialize contract with expected owner, state, and time", async function() {
+    it("should initialize contract with expected owner, state, and time", async () => {
         assert.equal(await contract.owner(), owner);
         assert.equal(await contract.currentPotStartTime(), web3.eth.getBlock(web3.eth.blockNumber).timestamp);
         assert.equal(await contract.state(), inProgressState);
     });
 
-    it("should allow single contribution", async function() {
+    it("should allow single contribution", async () => {
         const potPreSend = await contract.currentPot();
         assert.isTrue(potPreSend.equals(zero));
 
@@ -52,7 +52,7 @@ contract("WinThePot", function(accounts) {
         assert.isTrue(potPostSend.equals(oneEther));
     });
 
-    it("should allow multiple contributions", async function() {
+    it("should allow multiple contributions", async () => {
         await contribute(account1, 2);
         await checkContribution(account1, twoEther, 0);
         await contribute(account2, 2);
@@ -62,19 +62,51 @@ contract("WinThePot", function(accounts) {
         assert.isTrue(potPostSend.equals(twoEther.mul(2)));
     });
 
-    it("should complete and record game with last contributor if pot goes over threshold", async function() {
+    it("should complete and record game with last contributor if pot goes over threshold", async () => {
         await contribute(account1, 2);
-        await contribute(account2, 2);
-        await contribute(accounts[3], 2);
-        await contribute(accounts[4], 2);
-        await contribute(accounts[5], 2);
+        await contribute(account2, 4);
+        await contribute(accounts[3], 4);
 
         assert.equal(await contract.state(), completeState);
         
         const game = await contract.getGame(0);
         assert.equal(false, game[0]);
-        assert.equal(accounts[5], game[1]);
+        assert.equal(accounts[3], game[1]);
         assert.isTrue(testThreshold.equals(game[2]));
         assert.isTrue(testThreshold.equals(game[3]));
+    });
+
+    it("should allow withdrawing contribution if time expires", async () => {
+
+    });
+
+    it("should allow withdrawing contribution if time expires and new game begins", async () => {
+
+    });
+
+    it("should not allow withdrawing contribution before time expires", async () => {
+
+    });
+
+    it("should allow withdrawing winnings if you won", async () => {
+
+    });
+
+    it("should not allow withdrawing winnings if you contributed to a game where you didn't win", async () => {
+
+    });
+
+    it("should successfully start new game and record previous if time expires", () => {
+
+    });
+
+    it("should fail to startNewGame if time hasn't expired", async () => {
+
+    });
+
+    // TODO: update implementation to enable this. currently doesn't work because contribution persists after game completion.
+    // idea: check on each contribution if previous should be erased
+    it("should allow you to contribute again if you lose a game", async () => {
+
     });
 });

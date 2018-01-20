@@ -20,7 +20,7 @@ contract WinThePot {
   }
 
   /*           Constants             */
-  uint constant public MAX_CONTRIBUTION = 2 ether;
+  uint constant public MAX_CONTRIBUTION = 4 ether;
   uint constant public MIN_CONTRIBUTION = 0.1 ether;
   uint constant public MAX_POT_THRESHOLD = 100; // 100 ether
   uint constant public MIN_POT_THRESHOLD = 1; // 1 ether
@@ -52,7 +52,28 @@ contract WinThePot {
   // Only one contribution per address allowed at a time
   modifier contributionAllowed() {
     require(msg.value <= MAX_CONTRIBUTION && msg.value >= MIN_CONTRIBUTION);
-    require(contributions[msg.sender].value == 0);
+    Contribution memory contribution = contributions[msg.sender];
+    uint previousContribution = contribution.value;
+    uint gameIndex = contribution.gameIndex;
+
+    // allow contribution if
+    // 1) you haven't contributed before or
+    // 2) you contributed before and withdrew your contribution or
+    // 3) you contributed before and lost or
+    // 4) you contributed before and won and withdrew your winnings
+    // (1) and (2) are true if previousContribution == 0
+    // (3) is true if winner != msg.sender
+    // (4) is true if winner == msg.sender && winnings == 0
+    bool checkForLoss;
+    address winner;
+    uint winnings;
+    if (gameIndex < games.length) {
+      checkForLoss = true;
+      Game storage game = games[gameIndex];
+      winner = game.winner;
+      winnings = game.winnings;
+    }
+    require(previousContribution == 0 || (checkForLoss && (winner != msg.sender || winnings == 0)));
     _;
   }
 
@@ -115,15 +136,11 @@ contract WinThePot {
     return true;
   }
 
-  function contributionWins() private view returns (bool) {
-    return currentPot >= threshold;
-  }
-
   /*           Fallback (Contribution) Function             */
   function () public safeSender duringGame contributionAllowed payable {
     contributions[msg.sender] = Contribution(msg.value, games.length);
     currentPot = currentPot + msg.value;
-    if (contributionWins()) {
+    if (currentPot >= threshold) {
       state = State.complete;
       games.push(Game({
         allCanWithdraw: false,
@@ -153,7 +170,7 @@ contract WinThePot {
     state = State.inProgress;
   }
 
-  /*          Accessor Methods (mostly for testing)           */
+  /*          Accessor Methods (for testing and/or UI)           */
   function getContribution(address addr) public view safeSender returns (uint value, uint gameIndex) {
     return (contributions[addr].value, contributions[addr].gameIndex);
   }
