@@ -12,6 +12,7 @@ contract("WinThePot", (accounts) => {
     const twoEther = oneEther.mul(2);
     const testThreshold = twoEther.mul(5); // this will change once Oraclize is used
     const zero = new BigNumber(0);
+    const threeHours = 3 * 3600;
 
     const owner = accounts[0];
     const account1 = accounts[1];
@@ -76,12 +77,23 @@ contract("WinThePot", (accounts) => {
         assert.isTrue(testThreshold.equals(game[3]));
     });
 
-    it("should allow withdrawing contribution if time expires", async () => {
-
-    });
-
     it("should allow withdrawing contribution if time expires and new game begins", async () => {
+        await contribute(account1, 2);
+        const startTime = await web3.eth.getBlock(web3.eth.blockNumber).timestamp;
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [threeHours], id: new Date().getTime()});
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        await contract.startNewGame();
 
+        const transaction = await contract.withdrawContribution({from: account1});
+        const logs = transaction.logs;
+        assert.equal(1, logs.length);
+
+        const log = logs[0];
+        assert.equal("Withdrawal", log.event);
+        assert.equal(account1, log.args.to);
+        assert.isTrue(log.args.success);
+        assert.isTrue(log.args.value.equals(twoEther));
+        checkContribution(account1, 0, 0);
     });
 
     it("should not allow withdrawing contribution before time expires", async () => {

@@ -19,6 +19,9 @@ contract WinThePot {
     complete
   }
 
+  /*           Events                */
+  event Withdrawal(address to, bool success, uint value);
+
   /*           Constants             */
   uint constant public MAX_CONTRIBUTION = 4 ether;
   uint constant public MIN_CONTRIBUTION = 0.1 ether;
@@ -112,9 +115,12 @@ contract WinThePot {
       // reset the contribution amount if sending fails
       if (!msg.sender.send(contribution)) {
         contributions[msg.sender].value = contribution;
+        Withdrawal(msg.sender, false, contribution);
         return false;
       }
     }
+
+    Withdrawal(msg.sender, true, contribution);
     return true;
   }
 
