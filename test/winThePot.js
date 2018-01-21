@@ -13,6 +13,7 @@ contract("WinThePot", (accounts) => {
     const twoEther = oneEther.mul(2);
     const testThreshold = twoEther.mul(5); // this will change once Oraclize is used
     const zero = new BigNumber(0);
+    const oneHour = 3600;
     const threeHours = 3 * 3600;
 
     const owner = accounts[0];
@@ -66,7 +67,7 @@ contract("WinThePot", (accounts) => {
         assert.isTrue(potPostSend.equals(oneEther));
     });
 
-    it("should allow multiple contributions", async () => {
+    it("should allow multiple contributions from different addresses in the same game", async () => {
         await contribute(account1, 2);
         await checkContribution(account1, twoEther, 0);
         await contribute(account2, 2);
@@ -74,6 +75,22 @@ contract("WinThePot", (accounts) => {
 
         const potPostSend = await contract.currentPot();
         assert.isTrue(potPostSend.equals(twoEther.mul(2)));
+    });
+
+    it("should allow you to contribute to another game if you lose earlier game", async () => {
+        await contribute(account1, 2);
+        await contribute(account2, 4);
+        await contribute(account3, 4);
+
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [threeHours], id: new Date().getTime()});
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        await contract.startNewGame();
+
+        await contribute(account1, 1);
+        await checkContribution(account1, oneEther, 1);
+        assert.equal(await contract.state(), inProgressState);
+        const secondGamePot = await contract.currentPot();
+        assert.isTrue(secondGamePot.equals(oneEther));
     });
 
     it("should complete and record game with last contributor if pot goes over threshold", async () => {
@@ -144,7 +161,7 @@ contract("WinThePot", (accounts) => {
             await contract.withdrawWinnings({from: account1});
             fail("winnings withdrawal should fail");
         } catch (e) {
-            assert.equal("Error: VM Exception while processing transaction: revert", e.toString());
+            assert.equal(e.toString(), "Error: VM Exception while processing transaction: revert");
             await checkGame(account3, false, testThreshold, testThreshold);
         }
     });
@@ -187,10 +204,14 @@ contract("WinThePot", (accounts) => {
     });
 
     it("should fail to startNewGame if time hasn't expired", async () => {
-
-    });
-
-    it("should allow you to contribute again if you lose a game", async () => {
-
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [oneHour], id: new Date().getTime()});
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        try {
+            await contract.startNewGame();
+            fail("startNewGame should fail");
+        } catch (e) {
+            assert.equal(e.toString(), "Error: VM Exception while processing transaction: revert");
+            assert.equal(await contract.getNumberOfGames(), 0);
+        }
     });
 });
