@@ -20,6 +20,10 @@ contract("WinThePot", (accounts) => {
     const account2 = accounts[2];
     const account3 = accounts[3];
 
+    const fail = (message) => {
+        throw new Error(message);
+    }
+
     beforeEach(async () => {
         contract = await WinThePot.new();
         contribute = async (account, etherValue) => {
@@ -104,6 +108,7 @@ contract("WinThePot", (accounts) => {
         const contributionBefore = await contract.getContribution(account1);
         try {
             await contract.withdrawContribution({from: account1});
+            fail("contribution withdrawal should fail");
         } catch (e) {
             assert.equal("Error: VM Exception while processing transaction: revert", e.toString());
             const contributionAfter = await contract.getContribution(account1);
@@ -131,7 +136,17 @@ contract("WinThePot", (accounts) => {
     });
 
     it("should not allow withdrawing winnings if you contributed to a game where you didn't win", async () => {
+        await contribute(account1, 2);
+        await contribute(account2, 4);
+        await contribute(account3, 4);
 
+        try {
+            await contract.withdrawWinnings({from: account1});
+            fail("winnings withdrawal should fail");
+        } catch (e) {
+            assert.equal("Error: VM Exception while processing transaction: revert", e.toString());
+            await checkGame(account3, false, testThreshold);
+        }
     });
 
     it("should successfully start new game and record previous if time expires", () => {
