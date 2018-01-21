@@ -79,7 +79,6 @@ contract("WinThePot", (accounts) => {
 
     it("should allow withdrawing contribution if time expires and new game begins", async () => {
         await contribute(account1, 2);
-        const startTime = await web3.eth.getBlock(web3.eth.blockNumber).timestamp;
         await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [threeHours], id: new Date().getTime()});
         await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
         await contract.startNewGame();
@@ -97,7 +96,16 @@ contract("WinThePot", (accounts) => {
     });
 
     it("should not allow withdrawing contribution before time expires", async () => {
-
+        await contribute(account1, 2);
+        const contributionBefore = await contract.getContribution(account1);
+        try {
+            await contract.withdrawContribution({from: account1});
+        } catch (e) {
+            assert.equal("Error: VM Exception while processing transaction: revert", e.toString());
+            const contributionAfter = await contract.getContribution(account1);
+            assert.isTrue(contributionBefore[0].equals(contributionAfter[0]), `Expected contribution value ${contributionAfter[0]} to equal ${contributionBefore[0]}`);
+            assert.isTrue(contributionBefore[1].equals(contributionAfter[1]), `Expected game index ${contributionAfter[1]} to equal ${contributionBefore[1]}`);
+        }
     });
 
     it("should allow withdrawing winnings if you won", async () => {

@@ -80,6 +80,11 @@ contract WinThePot {
     _;
   }
 
+  modifier withdrawalPossible() {
+    require(contributions[msg.sender].gameIndex < games.length);
+    _;
+  }
+
   modifier safeSender() {
     require(msg.sender != 0x00);
     _;
@@ -104,7 +109,7 @@ contract WinThePot {
    *   2) you participated in a game that expired before anyone won.
    * Adapted from http://solidity.readthedocs.io/en/develop/solidity-by-example.html Blind Auction
    */
-  function withdrawContribution() public safeSender returns (bool) {
+  function withdrawContribution() public safeSender withdrawalPossible returns (bool) {
     Game storage game = games[contributions[msg.sender].gameIndex];
     require(game.allCanWithdraw);
 
@@ -125,7 +130,7 @@ contract WinThePot {
   }
 
   
-  function withdrawWinnings() public safeSender returns (bool) {
+  function withdrawWinnings() public safeSender withdrawalPossible returns (bool) {
     Game storage game = games[contributions[msg.sender].gameIndex];
     require(msg.sender == game.winner);
 
