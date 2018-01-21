@@ -22,6 +22,7 @@ contract WinThePot {
   /*           Events                */
   event ContributionWithdrawal(address to, bool success, uint value);
   event WinningsWithdrawal(address to, bool success, uint value);
+  event NewGameStarted(uint startTime);
 
   /*           Constants             */
   uint constant public MAX_CONTRIBUTION = 4 ether;
@@ -173,16 +174,20 @@ contract WinThePot {
    * Starting a new game cannot end the previous game unless time has expired.
    */
   function startNewGame() public timeLimitReached returns (bool) {
-    state = State.complete;
     currentPot = 0;
     currentPotStartTime = now;
-    games.push(Game({
-      allCanWithdraw: true,
-      winner: address(0),
-      winnings: 0,
-      threshold: 0
-    }));
-    state = State.inProgress;
+    NewGameStarted(currentPotStartTime);
+
+    if (state == State.inProgress) {
+      games.push(Game({
+        allCanWithdraw: true,
+        winner: address(0),
+        winnings: 0,
+        threshold: 0
+      }));
+    } else {
+      state = State.inProgress;
+    }
   }
 
   /*          Accessor Methods (for testing and/or UI)           */
@@ -193,5 +198,9 @@ contract WinThePot {
   function getGame(uint index) public view returns (bool allCanWithdraw, address winner, uint winnings, uint thresh) {
     Game storage game = games[index];
     return (game.allCanWithdraw, game.winner, game.winnings, game.threshold);
+  }
+
+  function getNumberOfGames() public view returns (uint length) {
+    return games.length;
   }
 }

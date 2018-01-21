@@ -40,12 +40,12 @@ contract("WinThePot", (accounts) => {
             assert.isTrue(value.equals(expectedValue), `expected value to equal ${expectedValue} but was ${value}`);
             assert.isTrue(gameIndex.equals(expectedIndex), `expected index to equal ${expectedIndex} but was ${gameIndex}`);
         }
-        checkGame = async (expectedWinner, expectedAllCanWithdraw, expectedWinnings) => {
+        checkGame = async (expectedWinner, expectedAllCanWithdraw, expectedWinnings, expectedThreshold) => {
             const game = await contract.getGame(0);
-            assert.equal(expectedAllCanWithdraw, game[0], `expected allCanWithdraw to equal ${expectedAllCanWithdraw} but was ${game[0]}`);
-            assert.equal(expectedWinner, game[1], `expected winner to equal ${expectedWinner} but was ${game[1]}`);
+            assert.equal(expectedAllCanWithdraw, game[0], "allCanWithdraw didn't match expected");
+            assert.equal(expectedWinner, game[1], "winner didn't match expected");
             assert.isTrue(expectedWinnings.equals(game[2]), `expected winnings to equal ${expectedWinnings} but was ${game[2]}`);
-            assert.isTrue(testThreshold.equals(game[3]), `expected threshold to equal ${testThreshold} but was ${game[3]}`);
+            assert.isTrue(expectedThreshold.equals(game[3]), `expected threshold to equal ${testThreshold} but was ${game[3]}`);
         }
     });
 
@@ -82,7 +82,7 @@ contract("WinThePot", (accounts) => {
         await contribute(account3, 4);
 
         assert.equal(await contract.state(), completeState);
-        await checkGame(account3, false, testThreshold);
+        await checkGame(account3, false, testThreshold, testThreshold);
     });
 
     it("should allow withdrawing contribution if time expires and new game begins", async () => {
@@ -132,7 +132,7 @@ contract("WinThePot", (accounts) => {
         assert.isTrue(log.args.success);
         assert.isTrue(log.args.value.equals(testThreshold));
 
-        await checkGame(account3, false, zero);
+        await checkGame(account3, false, zero, testThreshold);
     });
 
     it("should not allow withdrawing winnings if you contributed to a game where you didn't win", async () => {
@@ -145,20 +145,51 @@ contract("WinThePot", (accounts) => {
             fail("winnings withdrawal should fail");
         } catch (e) {
             assert.equal("Error: VM Exception while processing transaction: revert", e.toString());
-            await checkGame(account3, false, testThreshold);
+            await checkGame(account3, false, testThreshold, testThreshold);
         }
     });
 
-    it("should successfully start new game and record previous if time expires", () => {
+    it("should reset fields and record previous game if time expires and startNewGame is called", async () => {
+        await contribute(account1, 2);
+        const potStartTime = await contract.currentPotStartTime();
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [threeHours], id: new Date().getTime()});
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        
+        const transaction = await contract.startNewGame();
+        const logs = transaction.logs;
+        assert.equal(1, logs.length);
 
+        const newPotStartTime = await contract.currentPotStartTime();
+        const newPot = await contract.currentPot();
+
+        const log = logs[0];
+        assert.equal("NewGameStarted", log.event);
+        assert.isTrue(newPotStartTime.equals(log.args.startTime));
+
+        await checkGame("0x0000000000000000000000000000000000000000", true, zero, zero);
+        assert.equal(await contract.state(), inProgressState);
+        assert.isTrue(newPotStartTime.gte(potStartTime.plus(threeHours)));
+        assert.isTrue(newPot.equals(zero));
+    });
+
+    it("should reset fields and not record game if previous game ended with winner and time expires", async () => {
+        await contribute(account1, 2);
+        await contribute(account2, 4);
+        await contribute(account3, 4);
+
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [threeHours], id: new Date().getTime()});
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        await contract.startNewGame();
+
+        await checkGame(account3, false, testThreshold, testThreshold);
+        assert.equal(await contract.getNumberOfGames(), 1);
+        assert.equal(await contract.state(), inProgressState);
     });
 
     it("should fail to startNewGame if time hasn't expired", async () => {
 
     });
 
-    // TODO: update implementation to enable this. currently doesn't work because contribution persists after game completion.
-    // idea: check on each contribution if previous should be erased
     it("should allow you to contribute again if you lose a game", async () => {
 
     });
