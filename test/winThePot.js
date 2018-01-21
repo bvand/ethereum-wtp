@@ -5,6 +5,7 @@ contract("WinThePot", (accounts) => {
     let contract;
     let contribute;
     let checkContribution;
+    let checkGame;
 
     const inProgressState = 0;
     const completeState = 1;
@@ -17,6 +18,7 @@ contract("WinThePot", (accounts) => {
     const owner = accounts[0];
     const account1 = accounts[1];
     const account2 = accounts[2];
+    const account3 = accounts[3];
 
     beforeEach(async () => {
         contract = await WinThePot.new();
@@ -31,8 +33,15 @@ contract("WinThePot", (accounts) => {
             const value = contribution[0];
             const gameIndex = contribution[1];
     
-            assert.isTrue(value.equals(expectedValue), `expected value ${value} to equal ${expectedValue}`);
-            assert.isTrue(gameIndex.equals(expectedIndex), `expected index ${gameIndex} to equal ${expectedIndex}`);
+            assert.isTrue(value.equals(expectedValue), `expected value to equal ${expectedValue} but was ${value}`);
+            assert.isTrue(gameIndex.equals(expectedIndex), `expected index to equal ${expectedIndex} but was ${gameIndex}`);
+        }
+        checkGame = async (expectedWinner, expectedAllCanWithdraw, expectedWinnings) => {
+            const game = await contract.getGame(0);
+            assert.equal(expectedAllCanWithdraw, game[0], `expected allCanWithdraw to equal ${expectedAllCanWithdraw} but was ${game[0]}`);
+            assert.equal(expectedWinner, game[1], `expected winner to equal ${expectedWinner} but was ${game[1]}`);
+            assert.isTrue(expectedWinnings.equals(game[2]), `expected winnings to equal ${expectedWinnings} but was ${game[2]}`);
+            assert.isTrue(testThreshold.equals(game[3]), `expected threshold to equal ${testThreshold} but was ${game[3]}`);
         }
     });
 
@@ -66,15 +75,10 @@ contract("WinThePot", (accounts) => {
     it("should complete and record game with last contributor if pot goes over threshold", async () => {
         await contribute(account1, 2);
         await contribute(account2, 4);
-        await contribute(accounts[3], 4);
+        await contribute(account3, 4);
 
         assert.equal(await contract.state(), completeState);
-        
-        const game = await contract.getGame(0);
-        assert.equal(false, game[0]);
-        assert.equal(accounts[3], game[1]);
-        assert.isTrue(testThreshold.equals(game[2]));
-        assert.isTrue(testThreshold.equals(game[3]));
+        await checkGame(account3, false, testThreshold);
     });
 
     it("should allow withdrawing contribution if time expires and new game begins", async () => {
@@ -88,7 +92,7 @@ contract("WinThePot", (accounts) => {
         assert.equal(1, logs.length);
 
         const log = logs[0];
-        assert.equal("Withdrawal", log.event);
+        assert.equal("ContributionWithdrawal", log.event);
         assert.equal(account1, log.args.to);
         assert.isTrue(log.args.success);
         assert.isTrue(log.args.value.equals(twoEther));
@@ -103,13 +107,27 @@ contract("WinThePot", (accounts) => {
         } catch (e) {
             assert.equal("Error: VM Exception while processing transaction: revert", e.toString());
             const contributionAfter = await contract.getContribution(account1);
-            assert.isTrue(contributionBefore[0].equals(contributionAfter[0]), `Expected contribution value ${contributionAfter[0]} to equal ${contributionBefore[0]}`);
-            assert.isTrue(contributionBefore[1].equals(contributionAfter[1]), `Expected game index ${contributionAfter[1]} to equal ${contributionBefore[1]}`);
+            assert.isTrue(contributionBefore[0].equals(contributionAfter[0]), `Expected contribution value to equal ${contributionBefore[0]} but was ${contributionAfter[0]}`);
+            assert.isTrue(contributionBefore[1].equals(contributionAfter[1]), `Expected game index to equal ${contributionBefore[1]} but was ${contributionAfter[1]}`);
         }
     });
 
     it("should allow withdrawing winnings if you won", async () => {
+        await contribute(account1, 2);
+        await contribute(account2, 4);
+        await contribute(account3, 4);
 
+        const transaction = await contract.withdrawWinnings({from: account3});
+        const logs = transaction.logs;
+        assert.equal(1, logs.length);
+
+        const log = logs[0];
+        assert.equal("WinningsWithdrawal", log.event);
+        assert.equal(account3, log.args.to);
+        assert.isTrue(log.args.success);
+        assert.isTrue(log.args.value.equals(testThreshold));
+
+        await checkGame(account3, false, zero);
     });
 
     it("should not allow withdrawing winnings if you contributed to a game where you didn't win", async () => {

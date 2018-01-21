@@ -20,7 +20,8 @@ contract WinThePot {
   }
 
   /*           Events                */
-  event Withdrawal(address to, bool success, uint value);
+  event ContributionWithdrawal(address to, bool success, uint value);
+  event WinningsWithdrawal(address to, bool success, uint value);
 
   /*           Constants             */
   uint constant public MAX_CONTRIBUTION = 4 ether;
@@ -120,12 +121,12 @@ contract WinThePot {
       // reset the contribution amount if sending fails
       if (!msg.sender.send(contribution)) {
         contributions[msg.sender].value = contribution;
-        Withdrawal(msg.sender, false, contribution);
+        ContributionWithdrawal(msg.sender, false, contribution);
         return false;
       }
     }
 
-    Withdrawal(msg.sender, true, contribution);
+    ContributionWithdrawal(msg.sender, true, contribution);
     return true;
   }
 
@@ -141,9 +142,12 @@ contract WinThePot {
       // reset the game winnings if sending fails
       if (!msg.sender.send(winnings)) {
         games[contributions[msg.sender].gameIndex].winnings = winnings;
+        WinningsWithdrawal(msg.sender, false, winnings);
         return false;
       }
     }
+
+    WinningsWithdrawal(msg.sender, true, winnings);    
     return true;
   }
 
