@@ -9,10 +9,14 @@
   "private": false,
   "scripts": {
     "truffle": "./node_modules/.bin/truffle",
+    "compile": "truffle compile",
+    "testrpc": "./node_modules/.bin/ganache-cli",
+    "migrate": "truffle migrate",
     "test": "truffle test"
   },
   "devDependencies": {
     "bignumber.js": "^5.0.0",
+    "ganache-cli": "^6.0.3",
     "truffle": "^4.0.4"
   }
 }

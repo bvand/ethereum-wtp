@@ -6,6 +6,7 @@ contract("WinThePot", (accounts) => {
     let contribute;
     let checkContribution;
     let checkGame;
+    let fastForward;
 
     const inProgressState = 0;
     const completeState = 1;
@@ -27,12 +28,14 @@ contract("WinThePot", (accounts) => {
 
     beforeEach(async () => {
         contract = await WinThePot.new();
+
         contribute = async (account, etherValue) => {
             await contract.contribute({
                 from: account,
                 value: web3.toWei(etherValue, "ether")
             });
         };
+
         checkContribution = async (account, expectedValue, expectedIndex) => {
             const contribution = await contract.getContribution(account);
             const value = contribution[0];
@@ -41,12 +44,18 @@ contract("WinThePot", (accounts) => {
             assert.isTrue(value.equals(expectedValue), `expected value to equal ${expectedValue} but was ${value}`);
             assert.isTrue(gameIndex.equals(expectedIndex), `expected index to equal ${expectedIndex} but was ${gameIndex}`);
         }
+
         checkGame = async (expectedWinner, expectedAllCanWithdraw, expectedWinnings, expectedThreshold) => {
             const game = await contract.getGame(0);
             assert.equal(expectedAllCanWithdraw, game[0], "allCanWithdraw didn't match expected");
             assert.equal(expectedWinner, game[1], "winner didn't match expected");
             assert.isTrue(expectedWinnings.equals(game[2]), `expected winnings to equal ${expectedWinnings} but was ${game[2]}`);
             assert.isTrue(expectedThreshold.equals(game[3]), `expected threshold to equal ${testThreshold} but was ${game[3]}`);
+        }
+
+        fastForward = async (time) => {
+            await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [time], id: new Date().getTime()});
+            await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
         }
     });
 
@@ -82,8 +91,7 @@ contract("WinThePot", (accounts) => {
         await contribute(account2, 4);
         await contribute(account3, 4);
 
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [threeHours], id: new Date().getTime()});
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        await fastForward(threeHours);
         await contract.startNewGame();
 
         await contribute(account1, 1);
@@ -104,8 +112,7 @@ contract("WinThePot", (accounts) => {
 
     it("should allow withdrawing contribution if time expires and new game begins", async () => {
         await contribute(account1, 2);
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [threeHours], id: new Date().getTime()});
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        await fastForward(threeHours);
         await contract.startNewGame();
 
         const transaction = await contract.withdrawContribution({from: account1});
@@ -169,8 +176,7 @@ contract("WinThePot", (accounts) => {
     it("should reset fields and record previous game if time expires and startNewGame is called", async () => {
         await contribute(account1, 2);
         const potStartTime = await contract.currentPotStartTime();
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [threeHours], id: new Date().getTime()});
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        await fastForward(threeHours);
         
         const transaction = await contract.startNewGame();
         const logs = transaction.logs;
@@ -194,8 +200,7 @@ contract("WinThePot", (accounts) => {
         await contribute(account2, 4);
         await contribute(account3, 4);
 
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [threeHours], id: new Date().getTime()});
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        await fastForward(threeHours);
         await contract.startNewGame();
 
         await checkGame(account3, false, testThreshold, testThreshold);
@@ -204,8 +209,7 @@ contract("WinThePot", (accounts) => {
     });
 
     it("should fail to startNewGame if time hasn't expired", async () => {
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [oneHour], id: new Date().getTime()});
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+        await fastForward(oneHour);
         try {
             await contract.startNewGame();
             fail("startNewGame should fail");
