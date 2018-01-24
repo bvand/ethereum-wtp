@@ -12,11 +12,14 @@
     "compile": "truffle compile",
     "testrpc": "./node_modules/.bin/ganache-cli",
     "migrate": "truffle migrate",
+    "coverage-testrpc": "node_modules/.bin/testrpc-sc --gasLimit 0xfffffffffff --port 8555",    
+    "coverage": "./node_modules/.bin/solidity-coverage",
     "test": "truffle test"
   },
   "devDependencies": {
     "bignumber.js": "^5.0.0",
     "ganache-cli": "^6.0.3",
+    "solidity-coverage": "^0.4.8",
     "truffle": "^4.0.4"
   }
 }
