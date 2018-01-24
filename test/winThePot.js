@@ -28,7 +28,7 @@ contract("WinThePot", (accounts) => {
     beforeEach(async () => {
         contract = await WinThePot.new();
         contribute = async (account, etherValue) => {
-            await contract.sendTransaction({
+            await contract.contribute({
                 from: account,
                 value: web3.toWei(etherValue, "ether")
             });

@@ -23,6 +23,7 @@ contract WinThePot {
   event ContributionWithdrawal(address to, bool success, uint value);
   event WinningsWithdrawal(address to, bool success, uint value);
   event NewGameStarted(uint startTime);
+  event Fallback(address addr, uint value);
 
   /*           Constants             */
   uint constant public MAX_CONTRIBUTION = 4 ether;
@@ -152,8 +153,8 @@ contract WinThePot {
     return true;
   }
 
-  /*           Fallback (Contribution) Function             */
-  function () public safeSender duringGame contributionAllowed payable {
+  /*           Contribution             */
+  function contribute() public safeSender duringGame contributionAllowed payable {
     contributions[msg.sender] = Contribution(msg.value, games.length);
     currentPot = currentPot + msg.value;
     if (currentPot >= threshold) {
@@ -165,6 +166,12 @@ contract WinThePot {
         threshold: threshold
       }));
     }
+  }
+
+  /*           Fallback Function             */
+  function () public payable {
+    Fallback(msg.sender, msg.value);
+    revert();
   }
 
   /*           Start New Game
