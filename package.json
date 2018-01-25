@@ -9,12 +9,13 @@
   "private": false,
   "scripts": {
     "truffle": "./node_modules/.bin/truffle",
+    "test": "truffle test",
     "compile": "truffle compile",
     "testrpc": "./node_modules/.bin/ganache-cli",
     "migrate": "truffle migrate",
     "coverage-testrpc": "node_modules/.bin/testrpc-sc --gasLimit 0xfffffffffff --port 8555",    
-    "coverage": "./node_modules/.bin/solidity-coverage",
-    "test": "truffle test"
+    "coverage": "./node_modules/.bin/solidity-coverage"
+    
   },
   "devDependencies": {
     "bignumber.js": "^5.0.0",

@@ -15,6 +15,14 @@ Win the Pot is an Ethereum-based smart contract that gives players the opportuni
 * yarn 1.3.2
 * npm 5.6.0
 * node 8.9.4
+* install dependencies: `yarn`
+* test: `yarn run test`
 
-install dependencies: `yarn`
-test: `yarn run test`
+### Migrate Contracts to testrpc
+* `yarn run compile`
+* `yarn run testrpc` (must get run before `migrate`)
+* `yarn run migrate`
+
+### Code Coverage
+* `yarn run coverage-testrpc` (must get run before `coverage`)
+* `yarn run coverage`

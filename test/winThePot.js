@@ -59,6 +59,10 @@ contract("WinThePot", (accounts) => {
         }
     });
 
+    afterEach(async () => {
+        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
+    })
+
     it("should initialize contract with expected owner, state, and time", async () => {
         assert.equal(await contract.owner(), owner);
         assert.equal(await contract.currentPotStartTime(), web3.eth.getBlock(web3.eth.blockNumber).timestamp);
