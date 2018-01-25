@@ -16,6 +16,7 @@ contract("WinThePot", (accounts) => {
     const zero = new BigNumber(0);
     const oneHour = 3600;
     const threeHours = 3 * 3600;
+    const requireFailureMessage = "Error: VM Exception while processing transaction: revert";
 
     const owner = accounts[0];
     const account1 = accounts[1];
@@ -101,6 +102,47 @@ contract("WinThePot", (accounts) => {
         assert.isTrue(secondGamePot.equals(oneEther));
     });
 
+    it("should not allow contribution when game is complete", async () => {
+        await contribute(account1, 2);
+        await contribute(account2, 4);
+        await contribute(account3, 4);
+
+        try {
+            await contribute(accounts[4], 1);
+            fail("contribution should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+        }
+    });
+
+    it("should not allow contributions below minimum", async () => {
+        try {
+            await contribute(account1, 0.09);
+            fail("contribution should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+        }
+    });
+
+    it("should not allow contributions above maximum", async () => {
+        try {
+            await contribute(account1, 4.1);
+            fail("contribution should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+        }
+    });
+
+    it("should not allow you to contribute twice during the same game", async () => {
+        await contribute(account1, 2);
+        try {
+            await contribute(account1, 1);
+            fail("contribution should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+        }
+    });
+
     it("should complete and record game with last contributor if pot goes over threshold", async () => {
         await contribute(account1, 2);
         await contribute(account2, 4);
@@ -134,7 +176,7 @@ contract("WinThePot", (accounts) => {
             await contract.withdrawContribution({from: account1});
             fail("contribution withdrawal should fail");
         } catch (e) {
-            assert.equal("Error: VM Exception while processing transaction: revert", e.toString());
+            assert.equal(e.toString(), requireFailureMessage);
             const contributionAfter = await contract.getContribution(account1);
             assert.isTrue(contributionBefore[0].equals(contributionAfter[0]), `Expected contribution value to equal ${contributionBefore[0]} but was ${contributionAfter[0]}`);
             assert.isTrue(contributionBefore[1].equals(contributionAfter[1]), `Expected game index to equal ${contributionBefore[1]} but was ${contributionAfter[1]}`);
@@ -168,8 +210,9 @@ contract("WinThePot", (accounts) => {
             await contract.withdrawWinnings({from: account1});
             fail("winnings withdrawal should fail");
         } catch (e) {
-            assert.equal(e.toString(), "Error: VM Exception while processing transaction: revert");
+            assert.equal(e.toString(), requireFailureMessage);
             await checkGame(account3, false, testThreshold, testThreshold);
+            await checkContribution(account1, twoEther, 0);
         }
     });
 
@@ -214,7 +257,7 @@ contract("WinThePot", (accounts) => {
             await contract.startNewGame();
             fail("startNewGame should fail");
         } catch (e) {
-            assert.equal(e.toString(), "Error: VM Exception while processing transaction: revert");
+            assert.equal(e.toString(), requireFailureMessage);
             assert.equal(await contract.getNumberOfGames(), 0);
         }
     });

@@ -83,11 +83,6 @@ contract WinThePot {
     _;
   }
 
-  modifier safeSender() {
-    require(msg.sender != 0x00);
-    _;
-  }
-
   modifier timeLimitReached() {
     require(now > currentPotStartTime + MAX_GAME_TIME);
     _;
@@ -107,7 +102,7 @@ contract WinThePot {
    *   2) you participated in a game that expired before anyone won.
    * Adapted from http://solidity.readthedocs.io/en/develop/solidity-by-example.html Blind Auction
    */
-  function withdrawContribution() public safeSender withdrawalPossible returns (bool) {
+  function withdrawContribution() public withdrawalPossible returns (bool) {
     Game storage game = games[contributions[msg.sender].gameIndex];
     require(game.allCanWithdraw);
 
@@ -128,7 +123,7 @@ contract WinThePot {
   }
 
   
-  function withdrawWinnings() public safeSender withdrawalPossible returns (bool) {
+  function withdrawWinnings() public withdrawalPossible returns (bool) {
     Game storage game = games[contributions[msg.sender].gameIndex];
     require(msg.sender == game.winner);
 
@@ -149,7 +144,7 @@ contract WinThePot {
   }
 
   /*           Contribution             */
-  function contribute() public safeSender duringGame contributionAllowed payable {
+  function contribute() public duringGame contributionAllowed payable {
     contributions[msg.sender] = Contribution(msg.value, games.length);
     currentPot = currentPot + msg.value;
     if (currentPot >= threshold) {
@@ -192,7 +187,7 @@ contract WinThePot {
   }
 
   /*          Accessor Methods (for testing and/or UI)           */
-  function getContribution(address addr) public view safeSender returns (uint value, uint gameIndex) {
+  function getContribution(address addr) public view returns (uint value, uint gameIndex) {
     return (contributions[addr].value, contributions[addr].gameIndex);
   }
 
