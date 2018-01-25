@@ -59,10 +59,6 @@ contract("WinThePot", (accounts) => {
         }
     });
 
-    afterEach(async () => {
-        await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
-    })
-
     it("should initialize contract with expected owner, state, and time", async () => {
         assert.equal(await contract.owner(), owner);
         assert.equal(await contract.currentPotStartTime(), web3.eth.getBlock(web3.eth.blockNumber).timestamp);
@@ -222,4 +218,23 @@ contract("WinThePot", (accounts) => {
             assert.equal(await contract.getNumberOfGames(), 0);
         }
     });
+
+    it("should log sender, value, and time if ether is sent directly to contract", async () => {
+        const transaction = await contract.sendTransaction({
+            from: account1,
+            value: web3.toWei(1, "ether")
+        });
+
+        const logs = transaction.logs;
+        assert.equal(1, logs.length);
+
+        const log = logs[0];
+        assert.equal("Fallback", log.event);
+
+        assert.equal(log.args.sender, account1);
+        assert.isTrue(log.args.value.equals(oneEther));
+
+        const potStartTime = await contract.currentPotStartTime();
+        assert.isTrue(potStartTime.equals(log.args.time));
+    })
 });

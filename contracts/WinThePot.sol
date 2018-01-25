@@ -23,7 +23,7 @@ contract WinThePot {
   event ContributionWithdrawal(address to, bool success, uint value);
   event WinningsWithdrawal(address to, bool success, uint value);
   event NewGameStarted(uint startTime);
-  event Fallback(address addr, uint value);
+  event Fallback(address sender, uint value, uint time);
 
   /*           Constants             */
   uint constant public MAX_CONTRIBUTION = 4 ether;
@@ -44,11 +44,6 @@ contract WinThePot {
   uint private threshold;
 
   /*           Modifiers             */
-  modifier onlyOwner() {
-    require(msg.sender == owner);
-    _;
-  }
-
   modifier duringGame() {
     require(state == State.inProgress);
     _;
@@ -170,8 +165,7 @@ contract WinThePot {
 
   /*           Fallback Function             */
   function () public payable {
-    Fallback(msg.sender, msg.value);
-    revert();
+    Fallback(msg.sender, msg.value, now);
   }
 
   /*           Start New Game

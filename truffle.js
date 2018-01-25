@@ -1,9 +1,9 @@
 module.exports = {
     networks: {
-        development: {
+        testrpc: {
             host: "localhost",
-            port: 8545,
-            network_id: "*" // Match any network id
+            port: 8565,
+            network_id: "*"
         },
         coverage: {
             host: "localhost",
@@ -14,6 +14,3 @@ module.exports = {
         }
     }
 };
-// 47123880000000000
-// 471238800000000000000
-// 100000000000000000000

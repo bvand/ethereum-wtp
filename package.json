@@ -11,8 +11,8 @@
     "truffle": "./node_modules/.bin/truffle",
     "test": "truffle test",
     "compile": "truffle compile",
-    "testrpc": "./node_modules/.bin/ganache-cli",
-    "migrate": "truffle migrate",
+    "testrpc": "./node_modules/.bin/ganache-cli --port 8565",
+    "migrate": "truffle migrate --network testrpc",
     "coverage-testrpc": "node_modules/.bin/testrpc-sc --gasLimit 0xfffffffffff --port 8555",    
     "coverage": "./node_modules/.bin/solidity-coverage"
     
