@@ -7,6 +7,7 @@ contract WinThePot {
     uint gameIndex;         // which game the contribution was a part of
     uint contributionIndex; // order of this contribution (i.e. 2nd, 4th... 0-indexed)
     bool withdrawn;         // true if contributor has withdrawn their funds
+    uint potPostContrib;    // value of the pot post this contribution (used to help determine winnings)
   }
 
   struct Game {
@@ -162,10 +163,10 @@ contract WinThePot {
   /*           Contribution             */
   function contribute() external contributionAllowed payable {
     assert(thresholdOwners.length < MAX_POT_THRESHOLD);
-
-    contributions[msg.sender] = Contribution(msg.value, games.length, contributionCounter, false);
-    contributionCounter++;
+    
     currentPot = currentPot + msg.value;
+    contributions[msg.sender] = Contribution(msg.value, games.length, contributionCounter, false, currentPot);
+    contributionCounter++;
     uint nextThreshold = (thresholdOwners.length + 1) * 1 ether;
 
     while (nextThreshold <= currentPot) {
@@ -188,7 +189,7 @@ contract WinThePot {
       games.push(Game({
         allCanWithdraw: false,
         winner: gameWinner,
-        potValue: currentPot,
+        potValue: contributions[gameWinner].potPostContrib,
         threshold: thresholdValue,
         winningIndex: contributions[gameWinner].contributionIndex,
         winningsWithdrawn: false
@@ -222,9 +223,9 @@ contract WinThePot {
   }
 
   /*          Accessor Methods (for testing and UI)           */
-  function getContribution(address addr) public view returns (uint value, uint gameIndex, uint contributionIndex, bool withdrawn) {
+  function getContribution(address addr) public view returns (uint value, uint gameIndex, uint contributionIndex, bool withdrawn, uint potPostContrib) {
     Contribution storage contribution = contributions[addr];
-    return (contribution.value, contribution.gameIndex, contribution.contributionIndex, contribution.withdrawn);
+    return (contribution.value, contribution.gameIndex, contribution.contributionIndex, contribution.withdrawn, contribution.potPostContrib);
   }
 
   function getGame(uint index) public view returns (bool allCanWithdraw, address winner, uint winnings, uint thresh, uint winningIndex, bool withdrawn) {

@@ -22,9 +22,10 @@ contract("WinThePot", (accounts) => {
     const requireFailureMessage = "Error: VM Exception while processing transaction: revert";
 
     const owner = accounts[0];
-    const account1 = accounts[1];
-    const account2 = accounts[2];
-    const account3 = accounts[3];
+    const player1 = accounts[1];
+    const player2 = accounts[2];
+    const player3 = accounts[3];
+    const player4 = accounts[4];
 
     const fail = (message) => {
         throw new Error(message);
@@ -40,17 +41,19 @@ contract("WinThePot", (accounts) => {
             });
         };
 
-        checkContribution = async (account, expectedValue, expectedGameIndex, expectedContributionCounter, expectedWithdrawn) => {
+        checkContribution = async (account, expectedValue, expectedGameIndex, expectedContributionCounter, expectedWithdrawn, expectedPotPostContrib) => {
             const contribution = await contract.getContribution(account);
             const value = contribution[0];
             const gameIndex = contribution[1];
             const contributionCounter = contribution[2]; 
             const withdrawn = contribution[3];
+            const potPostContrib = contribution[4];
 
             assert.isTrue(value.equals(expectedValue), `expected value to equal ${expectedValue} but was ${value}`);
             assert.isTrue(gameIndex.equals(expectedGameIndex), `expected index to equal ${expectedGameIndex} but was ${gameIndex}`);
             assert.isTrue(contributionCounter.equals(expectedContributionCounter), `expected contrib counter to equal ${expectedContributionCounter} but was ${contributionCounter}`);
             assert.equal(withdrawn, expectedWithdrawn, `expected withdrawn to equal ${expectedWithdrawn} but was ${withdrawn}`);
+            assert.isTrue(potPostContrib.equals(expectedPotPostContrib), `expected pot post contribution to equal ${expectedPotPostContrib} but was ${potPostContrib}`)
         }
 
         checkGame = async (expectedWinner, expectedAllCanWithdraw, expectedPotValue, expectedThreshold, expectedWinningIndex, expectedWithdrawn) => {
@@ -80,46 +83,45 @@ contract("WinThePot", (accounts) => {
         const potPreSend = await contract.currentPot();
         assert.isTrue(potPreSend.equals(zero));
 
-        await contribute(account1, 1);
-        await checkContribution(account1, oneEther, 0, 0, false);
+        await contribute(player1, 1);
+        await checkContribution(player1, oneEther, 0, 0, false, oneEther);
 
         const potPostSend = await contract.currentPot();
         assert.isTrue(potPostSend.equals(oneEther));
 
         assert.equal(await contract.contributionCounter(), 1);
-        assert.equal(await contract.thresholdOwners(0), account1);
-
+        assert.equal(await contract.thresholdOwners(0), player1);
         assert.equal(await contract.getNumThresholdsOwned(), 1);
     });
 
     it("should allow multiple contributions from different addresses in the same game", async () => {
-        await contribute(account1, 2);
-        await checkContribution(account1, twoEther, 0, 0, false);
-        await contribute(account2, 2);
-        await checkContribution(account2, twoEther, 0, 1, false);
+        await contribute(player1, 2);
+        await checkContribution(player1, twoEther, 0, 0, false, twoEther);
+        await contribute(player2, 2);
+        await checkContribution(player2, twoEther, 0, 1, false, ether(4));
 
         const potPostSend = await contract.currentPot();
         assert.isTrue(potPostSend.equals(ether(4)));
 
         assert.equal(await contract.contributionCounter(), 2);
-        assert.equal(await contract.thresholdOwners(0), account1);
-        assert.equal(await contract.thresholdOwners(1), account1);
-        assert.equal(await contract.thresholdOwners(2), account2);
-        assert.equal(await contract.thresholdOwners(3), account2);
+        assert.equal(await contract.thresholdOwners(0), player1);
+        assert.equal(await contract.thresholdOwners(1), player1);
+        assert.equal(await contract.thresholdOwners(2), player2);
+        assert.equal(await contract.thresholdOwners(3), player2);
         assert.equal(await contract.getNumThresholdsOwned(), 4);
     });
 
     it("should allow you to contribute to another game if you lose earlier game", async () => {
-        await contribute(account1, 2);
-        await contribute(account2, 4);
-        await contribute(account3, 4);
+        await contribute(player1, 2);
+        await contribute(player2, 4);
+        await contribute(player3, 4);
         assert.equal(await contract.getNumThresholdsOwned(), 10);        
 
         await fastForward(threeHours);
         await contract.startNewGame();
         
-        await contribute(account1, 1);
-        await checkContribution(account1, oneEther, 1, 0, false);
+        await contribute(player1, 1);
+        await checkContribution(player1, oneEther, 1, 0, false, oneEther);
 
         const secondGamePot = await contract.currentPot();
         assert.isTrue(secondGamePot.equals(oneEther));
@@ -128,7 +130,7 @@ contract("WinThePot", (accounts) => {
 
     it("should not allow contributions below minimum", async () => {
         try {
-            await contribute(account1, 0.09);
+            await contribute(player1, 0.09);
             fail("contribution should fail");
         } catch (e) {
             assert.equal(e.toString(), requireFailureMessage);
@@ -137,7 +139,7 @@ contract("WinThePot", (accounts) => {
 
     it("should not allow contributions above maximum", async () => {
         try {
-            await contribute(account1, 4.1);
+            await contribute(player1, 4.1);
             fail("contribution should fail");
         } catch (e) {
             assert.equal(e.toString(), requireFailureMessage);
@@ -145,9 +147,9 @@ contract("WinThePot", (accounts) => {
     });
 
     it("should not allow you to contribute twice during the same game", async () => {
-        await contribute(account1, 2);
+        await contribute(player1, 2);
         try {
-            await contribute(account1, 1);
+            await contribute(player1, 1);
             fail("contribution should fail");
         } catch (e) {
             assert.equal(e.toString(), requireFailureMessage);
@@ -156,19 +158,19 @@ contract("WinThePot", (accounts) => {
 
     /*                                             New Game Tests                                                             */
     it("should complete and record game with expected winner if pot is over threshold and startNewGame is called", async () => {
-        await contribute(account1, 2);
-        await contribute(account2, 4);
-        await contribute(account3, 4);
+        await contribute(player1, 2);
+        await contribute(player2, 4);
+        await contribute(player3, 4);
 
         await fastForward(threeHours);
         await contract.startNewGame();
 
-        await checkGame(account3, false, testThreshold, testThreshold, new BigNumber(2), false);
+        await checkGame(player3, false, testThreshold, testThreshold, new BigNumber(2), false);
         assert.equal(await contract.getNumberOfGames(), 1);
     });
 
     it("should reset fields and record previous game if time expires and startNewGame is called", async () => {
-        await contribute(account1, 2);
+        await contribute(player1, 2);
         const potStartTime = await contract.currentPotStartTime();
         await fastForward(threeHours);
         
@@ -204,78 +206,137 @@ contract("WinThePot", (accounts) => {
     });
 
     /*                                        Withdrawal Tests                                                 */
-    it("should allow withdrawing contribution if pot value is below threshold and new game begins", async () => {
-        await contribute(account1, 2);
+    it("should allow withdrawContributionExpiredGame if pot value is below threshold and new game begins", async () => {
+        await contribute(player1, 2);
         await fastForward(threeHours);
         await contract.startNewGame();
 
-        const transaction = await contract.withdrawContributionExpiredGame({from: account1});
+        const transaction = await contract.withdrawContributionExpiredGame({from: player1});
         const logs = transaction.logs;
         assert.equal(1, logs.length);
 
         const log = logs[0];
         assert.equal("ExpiredContributionWithdrawal", log.event);
-        assert.equal(account1, log.args.to);
+        assert.equal(player1, log.args.to);
         assert.isTrue(log.args.success);
         assert.isTrue(log.args.value.equals(twoEther));
-        checkContribution(account1, twoEther, 0, 0, true);
+        checkContribution(player1, twoEther, 0, 0, true, twoEther);
     });
 
-    it("should not allow withdrawing contribution before time expires", async () => {
-        await contribute(account1, 2);
-        try {
-            await contract.withdrawContributionExpiredGame({from: account1});
-            fail("contribution withdrawal should fail");
-        } catch (e) {
-            assert.equal(e.toString(), requireFailureMessage);
-            await checkContribution(account1, twoEther, 0, 0, false);
-        }
-    });
-
-    it("should allow withdrawing winnings if you won", async () => {
-        await contribute(account1, 4);
-        await contribute(account2, 4);
-        await contribute(account3, 4);
+    it("should allow withdrawWinnings if transaction origination address is the winner", async () => {
+        await contribute(player1, 4);
+        await contribute(player2, 4);
+        await contribute(player3, 4);
         const expectedPot = ether(12);
 
         await fastForward(threeHours);
         await contract.startNewGame();
 
-        const transaction = await contract.withdrawWinnings({from: account3});
+        const transaction = await contract.withdrawWinnings({from: player3});
         const logs = transaction.logs;
         assert.equal(1, logs.length);
 
         const log = logs[0];
         assert.equal("WinningsWithdrawal", log.event);
-        assert.equal(account3, log.args.to);
+        assert.equal(player3, log.args.to);
         assert.isTrue(log.args.success);
         assert.isTrue(log.args.value.equals(expectedPot));
 
-        await checkGame(account3, false, expectedPot, testThreshold, new BigNumber(2), true);
+        await checkGame(player3, false, expectedPot, testThreshold, new BigNumber(2), true);
     });
 
-    it("should not allow withdrawing winnings if you contributed to a game where you didn't win", async () => {
-        await contribute(account1, 2);
-        await contribute(account2, 4);
-        await contribute(account3, 4);
+    // Contributions do NOT roll over to the next game
+    it("should allow withdrawContributionAboveThreshold if game ends and contribution occurred after winner", async () => {
+        await contribute(player1, 2);
+        await contribute(player2, 4);
+        await contribute(player3, 4);
+        await contribute(player4, 3);
+
+        await fastForward(threeHours);
+        await contract.startNewGame();
+
+        const transaction = await contract.withdrawContributionAboveThreshold({from: player4});
+        const logs = transaction.logs;
+        assert.equal(1, logs.length);
+
+        const log = logs[0];
+        assert.equal("AboveThresholdContributionWithdrawal", log.event);
+        assert.equal(player4, log.args.to);
+        assert.isTrue(log.args.success);
+        assert.isTrue(log.args.value.equals(ether(3)));
+
+        await checkGame(player3, false, testThreshold, testThreshold, new BigNumber(2), false);
+    });
+
+    it("should not allow withdrawContributionExpiredGame if new game hasn't started", async () => {
+        await contribute(player1, 2);
+        try {
+            await contract.withdrawContributionExpiredGame({from: player1});
+            fail("contribution withdrawal should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+            await checkContribution(player1, twoEther, 0, 0, false, twoEther);
+        }
+    });
+
+    it("should not allow withdrawWinnings if transaction origination address is not the winner", async () => {
+        await contribute(player1, 2);
+        await contribute(player2, 4);
+        await contribute(player3, 4);
 
         await fastForward(threeHours);
         await contract.startNewGame();
 
         try {
-            await contract.withdrawWinnings({from: account1});
+            await contract.withdrawWinnings({from: player1});
             fail("winnings withdrawal should fail");
         } catch (e) {
             assert.equal(e.toString(), requireFailureMessage);
-            await checkGame(account3, false, testThreshold, testThreshold, new BigNumber(2), false);
-            await checkContribution(account1, twoEther, 0, 0, false);
+            await checkGame(player3, false, testThreshold, testThreshold, new BigNumber(2), false);
+            await checkContribution(player1, twoEther, 0, 0, false, twoEther);
         }
     });
+
+    it("should not allow withdrawWinnings twice", async () => {
+        await contribute(player1, 2);
+        await contribute(player2, 4);
+        await contribute(player3, 4);
+
+        await fastForward(threeHours);
+        await contract.startNewGame();
+
+        await contract.withdrawWinnings({from: player3});
+
+        try {
+            await contract.withdrawWinnings({from: player3});
+            fail("winnings withdrawal should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+            await checkGame(player3, false, testThreshold, testThreshold, new BigNumber(2), true);
+        }
+    });
+
+    it("should not allow withdrawContributionExpiredGame when someone won", async () => {
+        
+    });
+
+    it("should not allow withdrawContributionExpiredGame twice", async () => {
+        
+    });
+
+    it("should not allow withdrawContributionAboveThreshold twice", async () => {
+        
+    });
+
+    it("should not allow withdrawContributionAboveThreshold if contribution was below threshold", async () => {
+        
+    });
+
 
     /*                               Fallback Function Test                                   */
     it("should log sender, value, and time if ether is sent directly to contract", async () => {
         const transaction = await contract.sendTransaction({
-            from: account1,
+            from: player1,
             value: web3.toWei(1, "ether")
         });
 
@@ -285,7 +346,7 @@ contract("WinThePot", (accounts) => {
         const log = logs[0];
         assert.equal("Fallback", log.event);
 
-        assert.equal(log.args.sender, account1);
+        assert.equal(log.args.sender, player1);
         assert.isTrue(log.args.value.equals(oneEther));
 
         const potStartTime = await contract.currentPotStartTime();
