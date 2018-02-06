@@ -7,6 +7,7 @@ contract("WinThePot", (accounts) => {
     let checkContribution;
     let checkGame;
     let fastForward;
+    let simulateDefaultGame;
 
     const oneEther = new BigNumber('1e18');
 
@@ -70,10 +71,20 @@ contract("WinThePot", (accounts) => {
             await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_increaseTime", params: [time], id: new Date().getTime()});
             await web3.currentProvider.send({jsonrpc: "2.0", method: "evm_mine", params: [], id: new Date().getTime()});
         }
+
+        simulateDefaultGame = async () => {
+            await contribute(player1, 2);
+            await contribute(player2, 4);
+            await contribute(player3, 4);
+
+            await fastForward(threeHours);
+            await contract.startNewGame();
+        }
     });
 
     /*                           Constructor Tests                           */
     it("should initialize contract with expected owner and time", async () => {
+        console.log(accounts.length);
         assert.equal(await contract.owner(), owner);
         assert.equal(await contract.currentPotStartTime(), web3.eth.getBlock(web3.eth.blockNumber).timestamp);
     });
@@ -125,7 +136,6 @@ contract("WinThePot", (accounts) => {
 
         const secondGamePot = await contract.currentPot();
         assert.isTrue(secondGamePot.equals(oneEther));
-    
     });
 
     it("should not allow contributions below minimum", async () => {
@@ -158,12 +168,7 @@ contract("WinThePot", (accounts) => {
 
     /*                                             New Game Tests                                                             */
     it("should complete and record game with expected winner if pot is over threshold and startNewGame is called", async () => {
-        await contribute(player1, 2);
-        await contribute(player2, 4);
-        await contribute(player3, 4);
-
-        await fastForward(threeHours);
-        await contract.startNewGame();
+        await simulateDefaultGame();
 
         await checkGame(player3, false, testThreshold, testThreshold, new BigNumber(2), false);
         assert.equal(await contract.getNumberOfGames(), 1);
@@ -280,12 +285,7 @@ contract("WinThePot", (accounts) => {
     });
 
     it("should not allow withdrawWinnings if transaction origination address is not the winner", async () => {
-        await contribute(player1, 2);
-        await contribute(player2, 4);
-        await contribute(player3, 4);
-
-        await fastForward(threeHours);
-        await contract.startNewGame();
+        await simulateDefaultGame();
 
         try {
             await contract.withdrawWinnings({from: player1});
@@ -298,12 +298,7 @@ contract("WinThePot", (accounts) => {
     });
 
     it("should not allow withdrawWinnings twice", async () => {
-        await contribute(player1, 2);
-        await contribute(player2, 4);
-        await contribute(player3, 4);
-
-        await fastForward(threeHours);
-        await contract.startNewGame();
+        await simulateDefaultGame();
 
         await contract.withdrawWinnings({from: player3});
 
@@ -317,19 +312,72 @@ contract("WinThePot", (accounts) => {
     });
 
     it("should not allow withdrawContributionExpiredGame when someone won", async () => {
-        
+        await simulateDefaultGame();
+
+        try {
+            await contract.withdrawContributionExpiredGame({from: player2});
+            fail("contribution withdrawal should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+        }
     });
 
     it("should not allow withdrawContributionExpiredGame twice", async () => {
-        
+        await contribute(player1, 2);
+        await fastForward(threeHours);
+        await contract.startNewGame();
+
+        await contract.withdrawContributionExpiredGame({from: player1});
+
+        try {
+            await contract.withdrawContributionExpiredGame({from: player1});
+            fail("contribution withdrawal should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+        }
     });
 
     it("should not allow withdrawContributionAboveThreshold twice", async () => {
-        
+        await contribute(player1, 2);
+        await contribute(player2, 4);
+        await contribute(player3, 4);
+        await contribute(player4, 3);
+
+        await fastForward(threeHours);
+        await contract.startNewGame();
+
+        await contract.withdrawContributionAboveThreshold({from: player4});
+
+        try {
+            await contract.withdrawContributionAboveThreshold({from: player4});
+            fail("contribution withdrawal should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+        }
     });
 
-    it("should not allow withdrawContributionAboveThreshold if contribution was below threshold", async () => {
-        
+    it("should not allow withdrawContributionAboveThreshold if contribution was below threshold (including winner)", async () => {
+        await contribute(player1, 2);
+        await contribute(player2, 4);
+        await contribute(player3, 4);
+        await contribute(player4, 3);
+
+        await fastForward(threeHours);
+        await contract.startNewGame();
+
+        try {
+            await contract.withdrawContributionAboveThreshold({from: player3});
+            fail("contribution withdrawal should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+        }
+
+        try {
+            await contract.withdrawContributionAboveThreshold({from: player2});
+            fail("contribution withdrawal should fail");
+        } catch (e) {
+            assert.equal(e.toString(), requireFailureMessage);
+        }
     });
 
 
