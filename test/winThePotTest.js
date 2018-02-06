@@ -84,7 +84,6 @@ contract("WinThePot", (accounts) => {
 
     /*                           Constructor Tests                           */
     it("should initialize contract with expected owner and time", async () => {
-        console.log(accounts.length);
         assert.equal(await contract.owner(), owner);
         assert.equal(await contract.currentPotStartTime(), web3.eth.getBlock(web3.eth.blockNumber).timestamp);
     });
