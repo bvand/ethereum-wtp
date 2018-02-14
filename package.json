@@ -15,7 +15,6 @@
     "migrate": "truffle migrate --network testrpc",
     "coverage-testrpc": "node_modules/.bin/testrpc-sc --gasLimit 0xfffffffffff --port 8555",    
     "coverage": "./node_modules/.bin/solidity-coverage"
-    
   },
   "devDependencies": {
     "bignumber.js": "^5.0.0",

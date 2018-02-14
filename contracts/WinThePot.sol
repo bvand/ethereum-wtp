@@ -1,6 +1,8 @@
 pragma solidity ^0.4.17;
 
-contract WinThePot {
+import "./oraclizeAPI_0.4.sol";
+
+contract WinThePot is usingOraclize {
   /*           Structs & Enums       */
   struct Contribution {
     uint value;             // ether value of the contribution
@@ -33,6 +35,7 @@ contract WinThePot {
   uint constant public MIN_POT_THRESHOLD = 1; // 1 ether  
   uint constant public MAX_POT_VALUE = 104 ether; // allow pot to reach up to 104 ether (exclusive) on final contribution
   uint constant public MAX_GAME_TIME = 2 hours;
+  uint constant public RAND_BYTES = 7;
 
   /*           Public Fields         */
   address public owner;
@@ -89,6 +92,7 @@ contract WinThePot {
   function WinThePot() public {
     owner = msg.sender;
     currentPotStartTime = now;
+    oraclize_setProof(proofType_Ledger);
   }
 
   /*           Withdrawals          
@@ -182,7 +186,15 @@ contract WinThePot {
    * Starting a new game cannot end the previous game unless time has expired.
    */
   function startNewGame() external timeLimitReached {
-    uint thresholdIndex = getThreshold();
+    updateThreshold();
+  }
+
+  function __callback(bytes32 _queryId, string _result, bytes _proof) external {
+    require(msg.sender == oraclize_cbAddress());
+    require(oraclize_randomDS_proofVerify__returnCode(_queryId, _result, _proof) == 0);
+
+    uint thresholdIndex = uint(keccak256(_result)) % MAX_POT_THRESHOLD;
+
     uint thresholdValue = thresholdIndex * 1 ether;
     if (currentPot >= thresholdValue) {
       address gameWinner = thresholdOwners[thresholdIndex - 1];
@@ -212,9 +224,10 @@ contract WinThePot {
     NewGameStarted(currentPotStartTime);
   }
 
-  // TODO: use Oraclize and Random.org to generate random threshold
-  function getThreshold() private pure returns (uint) {
-    return 10;
+  function updateThreshold() private {
+    uint delay = 0;
+    uint callbackGas = 200000;
+    oraclize_newRandomDSQuery(delay, 7, callbackGas);
   }
 
   /*           Fallback Function             */

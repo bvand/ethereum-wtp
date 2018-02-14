@@ -9,7 +9,7 @@ Win the Pot is an Ethereum-based smart contract that gives players the opportuni
 * You may only contribute to one game at a time
 
 ## Technical details
-* The random threshold is generated using a combination of Oraclize (http://www.oraclize.it/) and the Random.org JSON-RPC API (https://api.random.org/json-rpc/1/)
+* The random threshold is generated using Oraclize (http://www.oraclize.it/) 
 
 ## Development
 * yarn 1.3.2
