@@ -9,17 +9,18 @@
   "private": false,
   "scripts": {
     "truffle": "./node_modules/.bin/truffle",
-    "test": "truffle test",
+    "test": "truffle test --network testrpc",
     "compile": "truffle compile",
-    "testrpc": "./node_modules/.bin/ganache-cli --port 8565",
+    "testrpc": "./node_modules/.bin/ganache-cli --port 8565 --mnemonic 'chimney fetch fan asthma glow place target cute collect potato thing mother'",
     "migrate": "truffle migrate --network testrpc",
-    "coverage-testrpc": "node_modules/.bin/testrpc-sc --gasLimit 0xfffffffffff --port 8555",    
+    "coverage-testrpc": "node_modules/.bin/testrpc-sc --gasLimit 0xfffffffffff --port 8555",
     "coverage": "./node_modules/.bin/solidity-coverage"
   },
   "devDependencies": {
     "bignumber.js": "^5.0.0",
     "ganache-cli": "^6.0.3",
     "solidity-coverage": "^0.4.8",
-    "truffle": "^4.0.4"
+    "truffle": "^4.0.4",
+    "truffle-hdwallet-provider": "^0.0.3"
   }
 }

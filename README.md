@@ -9,14 +9,20 @@ Win the Pot is an Ethereum-based smart contract that gives players the opportuni
 * You may only contribute to one game at a time
 
 ## Technical details
-* The random threshold is generated using Oraclize (http://www.oraclize.it/) 
+* The random threshold is generated using [Oraclize](http://www.oraclize.it/) 
 
 ## Development
 * yarn 1.3.2
 * npm 5.6.0
 * node 8.9.4
 * install dependencies: `yarn`
-* test: `yarn run test`
+
+
+### Testing
+Testing is done against a local testrpc instance using [ethereum-bridge](https://github.com/oraclize/ethereum-bridge). This is necessary for testing the Oraclize functionality.
+1. Run testrpc: `yarn run testrpc`
+2. Run ethereum-bridge: `node bridge -H localhost:8565 -a 9 --dev`
+2. test: `yarn run test`
 
 ### Migrate Contracts to testrpc
 * `yarn run compile`

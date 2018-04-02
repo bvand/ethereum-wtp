@@ -1,6 +1,6 @@
 pragma solidity ^0.4.17;
 
-import "./oraclizeAPI_0.4.sol";
+import "./usingOraclize.sol";
 
 contract WinThePot is usingOraclize {
   /*           Structs & Enums       */
@@ -25,6 +25,7 @@ contract WinThePot is usingOraclize {
   event ExpiredContributionWithdrawal(address to, bool success, uint value);
   event AboveThresholdContributionWithdrawal(address to, bool success, uint value);
   event WinningsWithdrawal(address to, bool success, uint value);
+  event StartNewGame(address from, bytes32 queryId);
   event NewGameStarted(uint startTime);
   event Fallback(address sender, uint value, uint time);
 
@@ -90,6 +91,8 @@ contract WinThePot is usingOraclize {
 
   /*           Contract             */
   function WinThePot() public {
+    // necessary for testing using ethereum-bridge
+    OAR = OraclizeAddrResolverI(0x6f485C8BF6fc43eA212E93BBF8ce046C7f1cb475);
     owner = msg.sender;
     currentPotStartTime = now;
     oraclize_setProof(proofType_Ledger);
@@ -189,6 +192,7 @@ contract WinThePot is usingOraclize {
     updateThreshold();
   }
 
+  // Oraclize callback method. Receives the random threshold from Oraclize and ends the game.
   function __callback(bytes32 _queryId, string _result, bytes _proof) external {
     require(msg.sender == oraclize_cbAddress());
     require(oraclize_randomDS_proofVerify__returnCode(_queryId, _result, _proof) == 0);
@@ -226,8 +230,9 @@ contract WinThePot is usingOraclize {
 
   function updateThreshold() private {
     uint delay = 0;
-    uint callbackGas = 200000;
-    oraclize_newRandomDSQuery(delay, 7, callbackGas);
+    uint callbackGas = 2000000;
+    bytes32 queryId = oraclize_newRandomDSQuery(delay, RAND_BYTES, callbackGas);
+    StartNewGame(msg.sender, queryId);
   }
 
   /*           Fallback Function             */

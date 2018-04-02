@@ -1,5 +1,5 @@
-var Migrations = artifacts.require("./WinThePot.sol");
+var WinThePot = artifacts.require("./WinThePot");
 
 module.exports = function(deployer) {
-  deployer.deploy(Migrations);
+  deployer.deploy(WinThePot);
 };
